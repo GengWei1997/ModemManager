@@ -1,0 +1,17 @@
+Package: modemmanager
+Version: 1.25.95-1ubuntu1
+Architecture: arm64
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Installed-Size: 7472
+Depends: libc6 (>= 2.42), libglib2.0-0t64 (>= 2.56.0), libgudev-1.0-0 (>= 212), libmbim-glib4 (>= 1.32~), libmbim-proxy, libpolkit-gobject-1-0 (>= 0.99), libqmi-glib5 (>= 1.37.95), libqmi-proxy, libqrtr-glib0 (>= 1.0.0), libsystemd0 (>= 209), polkitd
+Recommends: libmbim-utils, libqmi-utils, usb-modeswitch
+Section: net
+Priority: optional
+Homepage: https://www.freedesktop.org/wiki/Software/ModemManager/
+Description: D-Bus service for managing modems
+ ModemManager is a DBus-activated daemon which controls mobile broadband
+ (2G/3G/4G/5G) devices and connections. Whether built-in devices, USB dongles,
+ Bluetooth-paired telephones or professional RS232/USB devices with external
+ power supplies, ModemManager is able to prepare and configure the modems and
+ setup connections with them.
+Original-Maintainer: DebianOnMobile Maintainers <debian-on-mobile-maintainers@alioth-lists.debian.net>
