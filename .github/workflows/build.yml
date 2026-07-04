@@ -1,0 +1,94 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            meson \
+            ninja-build \
+            help2man \
+            gettext \
+            libglib2.0-dev \
+            libgudev-1.0-dev \
+            libpolkit-gobject-1-dev \
+            libsystemd-dev \
+            libdbus-1-dev \
+            libcurl4-openssl-dev \
+            libqrtr-glib-dev \
+            python3-dbus \
+            python3-gi \
+            gobject-introspection \
+            libgirepository1.0-dev \
+            gtk-doc-tools \
+            dpkg-dev \
+            fakeroot
+
+      - name: Build libmbim
+        run: |
+          cd /tmp
+          git clone --depth=1 https://gitlab.freedesktop.org/mobile-broadband/libmbim.git
+          cd libmbim
+          meson setup build --prefix=/usr --buildtype=release
+          ninja -C build
+          sudo ninja -C build install
+
+      - name: Build libqmi
+        run: |
+          cd /tmp
+          git clone --depth=1 https://gitlab.freedesktop.org/mobile-broadband/libqmi.git
+          cd libqmi
+          meson setup build --prefix=/usr --buildtype=release
+          ninja -C build
+          sudo ninja -C build install
+
+      - name: Setup
+        run: |
+          sudo ldconfig
+          meson setup build --prefix=/usr --buildtype=release
+
+      - name: Build
+        run: ninja -C build
+
+      - name: Prepare deb package
+        run: |
+          VERSION=$(meson introspect build --projectinfo | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
+          PKG_DIR="${{ github.workspace }}/modemmanager_${VERSION}_arm64"
+          mkdir -p "${PKG_DIR}/DEBIAN"
+          mkdir -p "${PKG_DIR}/usr"
+
+          DESTDIR="${PKG_DIR}" ninja -C build install
+
+          cp control/control "${PKG_DIR}/DEBIAN/control"
+          sed -i "s/^Version:.*/Version: ${VERSION}/" "${PKG_DIR}/DEBIAN/control"
+          cp control/postinst control/prerm control/postrm "${PKG_DIR}/DEBIAN/"
+          chmod 0755 "${PKG_DIR}/DEBIAN/postinst" "${PKG_DIR}/DEBIAN/prerm" "${PKG_DIR}/DEBIAN/postrm"
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Build deb package
+        run: fakeroot dpkg-deb --build "${{ github.workspace }}/modemmanager_${{ env.VERSION }}_arm64"
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: ModemManager ${{ env.VERSION }}
+          files: ${{ github.workspace }}/modemmanager_*_arm64.deb
